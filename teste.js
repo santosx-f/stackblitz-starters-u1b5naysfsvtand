@@ -6,6 +6,8 @@ async function pedir(metodo, caminho, dados) {
 
   const resposta = await fetch(BASE + caminho, opcoes);
   const texto = await resposta.text();
+  let corpo = null
+
   const corpo = texto ? JSON.parse(texto) : '(sem conteúdo)';
 
   console.log(`\n${method} ${caminho} → stutus ${resposta.status}`);

@@ -1,0 +1,8 @@
+{
+    "proximoId": 4,
+    "produtos": [
+        { "id": 1, "nome": "camiseta", "preco": 49.9},
+        { "id": 2, "nome": "Calça", "preco": 129.9},
+        { "id": 3, "nome": "Tênis", "preco": 299.9}
+    ]
+}
