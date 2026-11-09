@@ -8,7 +8,7 @@ function buscarPorId(req, res) {
   const produto = repo.buscarPorId(Number(req.params.id));
 
   if (!produto) {
-    return res.status(404).json({ erro : 'Produto não encontrado' });
+    return res.status(404).json({ erro: 'Produto não encontrado' });
   }
 
   res.json(produto);
@@ -18,7 +18,7 @@ function criar(req, res) {
   const { nome, preco } = req.body;
 
   if (!nome || !preco || preco <= 0) {
-    return res.status(400).json({ erro: 'Informe um nome e um preço maior que zero'});
+    return res.status(400).json({ erro: 'Informe um nome e um preço maior que zero' });
   }
 
   const novoProduto = repo.criar(nome, preco);
@@ -37,7 +37,7 @@ function atualizar(req, res) {
   const preco = req.body.preco ?? produto.preco;
 
   if (!nome || !preco || preco <= 0) {
-    return res.status(400).json({ erro: 'informe um nome e m preço maior que zero' });
+    return res.status(400).json({ erro: 'Informe um nome e um preço maior que zero' });
   }
 
   res.json(repo.atualizar(id, nome, preco));
@@ -53,4 +53,4 @@ function remover(req, res) {
   res.status(204).send();
 }
 
-module.exports = { listar, buscarPorId, criar, atualizar, remover};
+module.exports = { listar, buscarPorId, criar, atualizar, remover };

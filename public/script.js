@@ -1,5 +1,11 @@
 const API = '/produtos';
 
+// ---------- proteção: sem token, volta para o login ----------
+const token = localStorage.getItem('token');
+if (!token) {
+    window.location.href = '/login.html';
+}
+
 const formulario = document.getElementById('formulario');
 const campoNome = document.getElementById('nome');
 const campoPreco = document.getElementById('preco');
@@ -8,16 +14,44 @@ const botaoSalvar = document.getElementById('botao-salvar');
 const botaoCancelar = document.getElementById('botao-cancelar');
 const mensagem = document.getElementById('mensagem');
 const lista = document.getElementById('lista');
+const nomeUsuario = document.getElementById('nome-usuario');
+const botaoSair = document.getElementById('botao-sair');
 
 let idEmEdicao = null;
 
+try {
+    nomeUsuario.textContent = JSON.parse(localStorage.getItem('usuario')).nome;
+} catch {}
+
+function sairDaConta() {
+    localStorage.removeItem('token');
+    localStorage.removeItem('usuario');
+    window.location.href = '/login.html';
+}
+
+// fetch que já manda o token; se o servidor disser 401, volta ao login
+async function chamarApi(caminho, opcoes = {}) {
+    const resposta = await fetch(caminho, {
+        ...opcoes,
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+    });
+    if (resposta.status === 401) {
+        sairDaConta();
+        throw new Error('Sessão expirada');
+    }
+    return resposta;
+}
+
 function mostrarMensagem(texto, tipo) {
     mensagem.textContent = texto;
-    mensagem.className = tipo;
+    mensagem.className = tipo || '';
 }
 
 function formatarPreco(valor) {
-    return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL'});
+    return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
 function criarItem(produto) {
@@ -50,19 +84,80 @@ function criarItem(produto) {
 }
 
 async function carregarProdutos() {
-    lista.textContent = 'Carregando...'
+    lista.textContent = 'Carregando...';
 
     try {
-        const resposta = await fetch(API);
+        const resposta = await chamarApi(API);
         const produtos = await resposta.json();
 
         lista.textContent = '';
-        if (produtos.lenght === 0) {
-            lista.textContent = 'Nenhum produto cadastro.';
+        if (produtos.length === 0) {
+            lista.textContent = 'Nenhum produto cadastrado.';
             return;
         }
         produtos.forEach(produto => lista.append(criarItem(produto)));
     } catch {
-        lista.textContent = 'Não foi possivel caregar os produtos';
+        lista.textContent = 'Não foi possível carregar os produtos';
     }
 }
+
+function iniciarEdicao(produto) {
+    idEmEdicao = produto.id;
+    campoNome.value = produto.nome;
+    campoPreco.value = produto.preco;
+    tituloForm.textContent = 'Editar produto';
+    botaoSalvar.textContent = 'Salvar';
+    botaoCancelar.hidden = false;
+    campoNome.focus();
+}
+
+function cancelarEdicao() {
+    idEmEdicao = null;
+    formulario.reset();
+    tituloForm.textContent = 'Cadastrar produto';
+    botaoSalvar.textContent = 'Cadastrar';
+    botaoCancelar.hidden = true;
+}
+
+async function apagarProduto(produto) {
+    if (!confirm(`Apagar "${produto.nome}"?`)) return;
+
+    const resposta = await chamarApi(`${API}/${produto.id}`, { method: 'DELETE' });
+    if (!resposta.ok) {
+        mostrarMensagem('Não foi possível apagar', 'erro');
+        return;
+    }
+    mostrarMensagem('Produto apagado', 'sucesso');
+    carregarProdutos();
+}
+
+formulario.addEventListener('submit', async (evento) => {
+    evento.preventDefault();
+
+    const dados = { nome: campoNome.value.trim(), preco: Number(campoPreco.value) };
+    const editando = idEmEdicao !== null;
+
+    const resposta = await chamarApi(editando ? `${API}/${idEmEdicao}` : API, {
+        method: editando ? 'PUT' : 'POST',
+        body: JSON.stringify(dados),
+    });
+
+    if (!resposta.ok) {
+        const corpo = await resposta.json();
+        mostrarMensagem(corpo.erro, 'erro');
+        return;
+    }
+
+    mostrarMensagem(editando ? 'Produto atualizado' : 'Produto cadastrado', 'sucesso');
+    cancelarEdicao();
+    carregarProdutos();
+});
+
+botaoCancelar.addEventListener('click', cancelarEdicao);
+
+botaoSair.addEventListener('click', async () => {
+    try { await chamarApi('/auth/logout', { method: 'POST' }); } catch {}
+    sairDaConta();
+});
+
+carregarProdutos();
